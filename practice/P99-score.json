@@ -1,0 +1,210 @@
+{
+  "first": {
+    "stations": {
+      "A": {
+        "pts": 15,
+        "max": 15,
+        "detail": {
+          "a1_name": 2,
+          "a1_address": 2,
+          "a2": 3,
+          "a3": 3,
+          "a4": 2,
+          "a5": 2,
+          "a6": 0.5,
+          "a7": 0.5
+        }
+      },
+      "B": {
+        "pts": 13,
+        "max": 15,
+        "detail": {
+          "b1": 6,
+          "b2": 4,
+          "b3": 3
+        }
+      },
+      "C": {
+        "pts": 15,
+        "max": 15,
+        "detail": {
+          "steps": 6,
+          "verify": 4,
+          "unknowns": 3,
+          "no_invent": 2
+        },
+        "invent": false
+      },
+      "D": {
+        "pts": 20,
+        "max": 20,
+        "detail": {
+          "d1": 12,
+          "d2": 8
+        },
+        "veto": false,
+        "vetoReason": ""
+      },
+      "E": {
+        "pts": 10,
+        "max": 10,
+        "detail": {
+          "done": 3,
+          "blocked": 3,
+          "ask": 2,
+          "no_invent": 2
+        }
+      },
+      "F": {
+        "pts": 15,
+        "max": 15,
+        "detail": {
+          "f1": 6,
+          "f2": 4,
+          "f3": 5
+        },
+        "veto": false,
+        "vetoReason": ""
+      },
+      "G": {
+        "pts": 10,
+        "max": 10,
+        "detail": {
+          "g1": 3,
+          "g2": 5,
+          "g3": 2
+        }
+      },
+      "soft": {
+        "pts": 2,
+        "max": 2
+      }
+    },
+    "subtotal": 98,
+    "softBonus": 2,
+    "displayTotal": "98+2",
+    "veto": false,
+    "vetoReason": "",
+    "band": "Advance",
+    "constraints": {
+      "hours": "12–15 hrs/week (fictional)",
+      "days": "Tue/Thu afternoons + Sat morning (fictional)",
+      "conflicts": "None hard — blank-slate intern schedule",
+      "ce_enrolled": "no",
+      "ce_school": "",
+      "ce_willing": "tbd",
+      "ce_notes": "Willing to enroll TBD — needs details on accredited options",
+      "education": "hs",
+      "license": "no",
+      "driving": "na",
+      "not_care_seat": "yes",
+      "care_conflict": "na",
+      "lean": "structures"
+    },
+    "checksum": "0e48c848"
+  },
+  "second": {
+    "stations": {
+      "A": {
+        "pts": 15,
+        "max": 15,
+        "detail": {
+          "a1_name": 2,
+          "a1_address": 2,
+          "a2": 3,
+          "a3": 3,
+          "a4": 2,
+          "a5": 2,
+          "a6": 0.5,
+          "a7": 0.5
+        }
+      },
+      "B": {
+        "pts": 13,
+        "max": 15,
+        "detail": {
+          "b1": 6,
+          "b2": 4,
+          "b3": 3
+        }
+      },
+      "C": {
+        "pts": 15,
+        "max": 15,
+        "detail": {
+          "steps": 6,
+          "verify": 4,
+          "unknowns": 3,
+          "no_invent": 2
+        },
+        "invent": false
+      },
+      "D": {
+        "pts": 20,
+        "max": 20,
+        "detail": {
+          "d1": 12,
+          "d2": 8
+        },
+        "veto": false,
+        "vetoReason": ""
+      },
+      "E": {
+        "pts": 10,
+        "max": 10,
+        "detail": {
+          "done": 3,
+          "blocked": 3,
+          "ask": 2,
+          "no_invent": 2
+        }
+      },
+      "F": {
+        "pts": 15,
+        "max": 15,
+        "detail": {
+          "f1": 6,
+          "f2": 4,
+          "f3": 5
+        },
+        "veto": false,
+        "vetoReason": ""
+      },
+      "G": {
+        "pts": 10,
+        "max": 10,
+        "detail": {
+          "g1": 3,
+          "g2": 5,
+          "g3": 2
+        }
+      },
+      "soft": {
+        "pts": 2,
+        "max": 2
+      }
+    },
+    "subtotal": 98,
+    "softBonus": 2,
+    "displayTotal": "98+2",
+    "veto": false,
+    "vetoReason": "",
+    "band": "Advance",
+    "constraints": {
+      "hours": "12–15 hrs/week (fictional)",
+      "days": "Tue/Thu afternoons + Sat morning (fictional)",
+      "conflicts": "None hard — blank-slate intern schedule",
+      "ce_enrolled": "no",
+      "ce_school": "",
+      "ce_willing": "tbd",
+      "ce_notes": "Willing to enroll TBD — needs details on accredited options",
+      "education": "hs",
+      "license": "no",
+      "driving": "na",
+      "not_care_seat": "yes",
+      "care_conflict": "na",
+      "lean": "structures"
+    },
+    "checksum": "0e48c848"
+  }
+}

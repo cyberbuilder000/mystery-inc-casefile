@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="robots" content="noindex,nofollow,noarchive"/>
+  <title>Mystery Inc — Admin Tracker</title>
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+  <main>
+    <div id="gate" class="card gate">
+      <h1>Admin tracker</h1>
+      <p class="sub">Passphrase required. Documented in README for Michael/Mason.</p>
+      <label class="field" for="passInput">Passphrase</label>
+      <input id="passInput" type="password" autocomplete="off"/>
+      <div class="actions">
+        <button type="button" id="btnUnlock">Unlock</button>
+      </div>
+      <p id="gateErr" class="sub" style="color:var(--bad)"></p>
+      <p class="foot"><a href="index.html" style="color:#a8c7fa">← Candidate app</a></p>
+    </div>
+
+    <div id="adminApp" class="hidden">
+      <h1>Mystery Inc — Weighted Score Tracker</h1>
+      <p class="sub">Blind codes · auto-score /100 · veto · hire band · constraints. Personal lane only.</p>
+      <div class="card">
+        <div class="actions">
+          <button type="button" id="btnRefresh" class="secondary">Refresh</button>
+          <button type="button" id="btnExportAll" class="secondary">Export all JSON</button>
+          <label class="btn secondary" style="display:inline-block">
+            Import JSON
+            <input id="fileImport" type="file" accept="application/json,.json" style="display:none"/>
+          </label>
+          <button type="button" id="btnClearAll" class="danger">Clear all</button>
+        </div>
+        <p id="importNote" class="sub"></p>
+      </div>
+      <div class="card">
+        <h2>Attempts</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th><th>Name</th><th>Score</th><th>Band</th><th>Veto</th><th>Education</th><th>CE</th><th>Finished</th>
+            </tr>
+          </thead>
+          <tbody id="attemptRows"></tbody>
+        </table>
+      </div>
+      <div id="detail"></div>
+      <p class="foot">Weights: A15 B15 C15 D20 E10 F15 G10 · Soft +0–2 · Advance ≥80 / Discuss 65–79 / Do not advance &lt;65 or veto.</p>
+    </div>
+  </main>
+  <script src="js/scoring.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
