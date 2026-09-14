@@ -573,7 +573,7 @@ End of block.</pre>
           <button type="button" id="btnStart">Start Case Files →</button>
         </div>
       </div>
-      <p class="foot">All forms, towns, IDs, and claims are FICTIONAL. Candidate view does not show scores or answer keys. Admin review: <a href="admin.html" style="color:#a8c7fa">admin.html</a></p>
+      <p class="foot">All forms, towns, IDs, and claims are FICTIONAL. Candidate view does not show scores or answer keys. Scores are reviewed privately by the administrator — not shown here.</p>
     `;
   }
 
