@@ -1,2 +1,7 @@
 User-agent: *
 Disallow: /
+
+User-agent: *
+Disallow: /admin.html
+Disallow: /js/scoring.js
+Disallow: /js/admin.js
