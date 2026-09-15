@@ -11,7 +11,10 @@
   }
 })(typeof window !== "undefined" ? window : globalThis, function () {
   const DEFAULT_BASE = "https://hitl-ops-portal.vercel.app";
-  const TIMEOUT_MS = 20000;
+  const REDEEM_TIMEOUT_MS = 20000;
+  const SUBMIT_TIMEOUT_MS = 60000;
+  /** Extra attempts after the first failure. Network/timeout only; never 429. */
+  const NETWORK_AUTO_RETRIES = 1;
 
   const USER_MESSAGES = {
     invalid: "That invite code is not valid. Check it and try again.",
@@ -19,6 +22,9 @@
     expired: "This invite code has expired. Ask for a new one.",
     already_submitted: "This case file was already received.",
     network: "Network error — check your connection and try again.",
+    timeout: "The request timed out. Try again — do not close this page.",
+    rate_limited:
+      "Too many submit attempts for this code. Wait about 10 minutes or ask admin for a new invite.",
     unavailable: "Could not reach the case-file service. Try again in a moment.",
     unknown: "Could not complete that request. Try again.",
   };
@@ -55,7 +61,9 @@
   }
 
   function classify(status, data, networkFailed) {
+    if (networkFailed === "timeout" || networkFailed === "aborted") return "timeout";
     if (networkFailed) return "network";
+    if (status === 429) return "rate_limited";
     const blob = blobFromData(data);
 
     if (/already[_\s-]?submitted|duplicate submit|already received/.test(blob)) {
@@ -77,7 +85,7 @@
       if (/\b(used|redeemed|consumed)\b/.test(blob)) return "used";
       return "invalid";
     }
-    if (status === 429 || (status >= 500 && status <= 599)) {
+    if (status >= 500 && status <= 599) {
       return "unavailable";
     }
     if (/invalid|not[_\s-]?found|unknown|malformed|missing|not open/.test(blob)) {
@@ -97,6 +105,17 @@
     return err;
   }
 
+  function isAbortError(err) {
+    if (!err) return false;
+    if (err.name === "AbortError") return true;
+    if (err.code === 20) return true;
+    return false;
+  }
+
+  function canAutoRetry(err) {
+    return !!(err && (err.kind === "network" || err.kind === "timeout"));
+  }
+
   function parseBody(text, contentType) {
     const trimmed = (text || "").trim();
     if (!trimmed) return null;
@@ -112,10 +131,10 @@
     }
   }
 
-  async function postJson(path, body) {
+  async function postJsonOnce(path, body, timeoutMs) {
     const url = apiBase() + path;
     const ctrl = typeof AbortController === "function" ? new AbortController() : null;
-    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, TIMEOUT_MS) : null;
+    const timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeoutMs) : null;
     let res;
     try {
       res = await fetch(url, {
@@ -129,8 +148,10 @@
         body: JSON.stringify(body),
         signal: ctrl ? ctrl.signal : undefined,
       });
-    } catch {
-      throw TakeError("network", 0);
+    } catch (err) {
+      const aborted =
+        isAbortError(err) || (ctrl && ctrl.signal && ctrl.signal.aborted);
+      throw TakeError(aborted ? "timeout" : "network", 0);
     } finally {
       if (timer) clearTimeout(timer);
     }
@@ -146,8 +167,22 @@
     return data || { ok: true };
   }
 
+  async function postJson(path, body, timeoutMs) {
+    let lastErr;
+    const attempts = 1 + NETWORK_AUTO_RETRIES;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await postJsonOnce(path, body, timeoutMs);
+      } catch (err) {
+        lastErr = err;
+        if (!canAutoRetry(err) || i >= NETWORK_AUTO_RETRIES) throw err;
+      }
+    }
+    throw lastErr;
+  }
+
   function redeem(inviteCode) {
-    return postJson("/api/mystery-inc/take/redeem", { inviteCode: inviteCode });
+    return postJson("/api/mystery-inc/take/redeem", { inviteCode: inviteCode }, REDEEM_TIMEOUT_MS);
   }
 
   function submit(payload) {
@@ -155,7 +190,7 @@
     if (payload.constraints && typeof payload.constraints === "object") {
       body.constraints = payload.constraints;
     }
-    return postJson("/api/mystery-inc/take/submit", body);
+    return postJson("/api/mystery-inc/take/submit", body, SUBMIT_TIMEOUT_MS);
   }
 
   return {
@@ -164,5 +199,8 @@
     userMessage: userMessage,
     redeem: redeem,
     submit: submit,
+    REDEEM_TIMEOUT_MS: REDEEM_TIMEOUT_MS,
+    SUBMIT_TIMEOUT_MS: SUBMIT_TIMEOUT_MS,
+    NETWORK_AUTO_RETRIES: NETWORK_AUTO_RETRIES,
   };
 });
