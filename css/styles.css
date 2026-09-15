@@ -111,6 +111,25 @@ th { color: var(--muted); font-weight: 560; }
   background: #1f1c10; border-radius: 0 8px 8px 0; margin: 10px 0;
   font-size: 0.9rem;
 }
+.notice.bad {
+  border-left-color: var(--bad);
+  background: #3a2220;
+  color: #f8d7d4;
+}
+.notice.warn-banner {
+  border-left-color: var(--warn);
+  background: #3d3420;
+}
+.practice-panel {
+  margin-top: 16px;
+}
+.practice-panel summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--muted);
+}
+.practice-panel summary:hover { color: var(--text); }
+.practice-panel[open] summary { margin-bottom: 8px; color: var(--warn); }
 .gate {
   max-width: 420px; margin: 80px auto; padding: 24px;
 }
