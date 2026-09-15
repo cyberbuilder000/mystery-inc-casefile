@@ -42,6 +42,7 @@ Responses are dark (no scores). This client never renders score/band/veto fields
 
 1. **Static default (what Pages uses):** edit `js/config.js` — change `window.MYSTERY_INC_HITL_API_BASE` from the staging origin to the later prod origin, then merge to `main`.
 2. **Local override:** set `window.MYSTERY_INC_HITL_API_BASE` *before* `js/config.js` loads (or edit `js/config.js` in a local copy). Example: `window.MYSTERY_INC_HITL_API_BASE = "http://localhost:3000";`
+3. **Localhost query (dev only):** on `localhost` / `127.0.0.1`, `?hitlApi=http://127.0.0.1:3456` overrides the base. Ignored on GitHub Pages.
 
 Do not ship HITL chrome or operator URLs into the candidate UI.
 

@@ -24,6 +24,17 @@
   };
 
   function apiBase() {
+    if (typeof window !== "undefined" && window.location) {
+      const host = window.location.hostname;
+      if (host === "localhost" || host === "127.0.0.1") {
+        try {
+          const q = new URLSearchParams(window.location.search).get("hitlApi");
+          if (q && /^https?:\/\//i.test(q)) return q.trim().replace(/\/+$/, "");
+        } catch {
+          /* ignore */
+        }
+      }
+    }
     const raw =
       (typeof window !== "undefined" && window.MYSTERY_INC_HITL_API_BASE) ||
       DEFAULT_BASE;
@@ -69,7 +80,7 @@
     if (status === 429 || (status >= 500 && status <= 599)) {
       return "unavailable";
     }
-    if (/\b(invalid|not[_\s-]?found|unknown|malformed|missing)\b/.test(blob)) {
+    if (/invalid|not[_\s-]?found|unknown|malformed|missing|not open/.test(blob)) {
       return "invalid";
     }
     if (data && (data.ok === false || data.success === false)) {
