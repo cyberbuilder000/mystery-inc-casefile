@@ -10,7 +10,7 @@
     { id: "F", title: "Case File 6 — Locker Size Argument", minutes: 7 },
     { id: "G1", title: "Case File 7 — Trap Labels (Part 1)", minutes: 2 },
     { id: "G2", title: "Case File 7 — Trap Labels (Part 2)", minutes: 4 },
-    { id: "CONS", title: "Constraints Sheet (not timed aptitude)", minutes: 0 },
+    { id: "CONS", title: "Constraints Sheet (not timed)", minutes: 0 },
   ];
 
   const EVENT_DATE = "2026-09-28";
@@ -25,6 +25,10 @@
     startedAt: null,
     id: null,
     lastAttempt: null,
+    submitStatus: null,
+    submitError: "",
+    briefingError: "",
+    busy: false,
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -495,7 +499,7 @@ End of block.</pre>
 
     if (id === "CONS") {
       return `
-        <p class="sub"><strong>CONSTRAINTS — NOT APTITUDE.</strong> Does not change station scores.</p>
+        <p class="sub"><strong>CONSTRAINTS — logistics only.</strong> Not part of the case files.</p>
         <h3>1) Schedule / hours</h3>
         <label class="field">Available part-time hours per week (estimate)</label>
         <input name="c_hours" type="text"/>
@@ -542,7 +546,22 @@ End of block.</pre>
     return "<p>Unknown station</p>";
   }
 
+  function queryInvite() {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      return (q.get("invite") || q.get("code") || "").trim();
+    } catch {
+      return "";
+    }
+  }
+
   function briefingHTML() {
+    const preset = escapeHtml(queryInvite());
+    const err = state.briefingError
+      ? `<p class="notice bad" id="briefingError" role="alert">${escapeHtml(state.briefingError)}</p>`
+      : `<p class="notice bad hidden" id="briefingError" role="alert"></p>`;
+    const busy = state.busy ? " disabled" : "";
+    const startLabel = state.busy ? "Checking invite…" : "Start case files →";
     return `
       <div class="card">
         <span class="badge">Personal lane · Mystery Inc · Fictional</span>
@@ -552,53 +571,88 @@ End of block.</pre>
         <div class="notice">
           <strong>How this run works:</strong>
           <ol>
-            <li>One continuous mystery across <strong>7 case files</strong> (Stations A–G).</li>
+            <li>Enter the <strong>invite code</strong> you were given, then complete <strong>7 case files</strong> (Stations A–G).</li>
             <li>Each file unlocks the next. Clue Board tracks progress.</li>
             <li>Inventing answers to “save the day” = the Phantom wins.</li>
             <li>No speed bonus — Continue when done early.</li>
-            <li>No phones. Ask the administrator only for timing / materials — not answers.</li>
+            <li>No phones. Ask only for timing / materials — not answers.</li>
           </ol>
         </div>
         <div class="clue-board" style="margin:12px 0">
           <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>→ Unmask</span>
         </div>
-        <label class="field" for="blindCode">Blind code (leave blank to auto-generate)</label>
-        <input id="blindCode" type="text" placeholder="e.g. P99" autocomplete="off"/>
-        <label class="field" for="fictionalName">Fictional display name (optional — practice)</label>
-        <input id="fictionalName" type="text" placeholder="e.g. Casey Holt" autocomplete="off"/>
-        <label class="field" style="display:flex;gap:8px;align-items:center;margin-top:12px">
-          <input id="practiceFlag" type="checkbox"/> Practice / dry-run (not a live hire session)
-        </label>
+        <label class="field" for="inviteCode">Invite code</label>
+        <input id="inviteCode" type="text" placeholder="Enter your invite code" autocomplete="off" spellcheck="false" value="${preset}"/>
+        ${err}
         <div class="actions">
-          <button type="button" id="btnStart">Start Case Files →</button>
+          <button type="button" id="btnStart"${busy}>${startLabel}</button>
         </div>
       </div>
-      <p class="foot">All forms, towns, IDs, and claims are FICTIONAL. Candidate view does not show scores or answer keys. Scores are reviewed privately by the administrator — not shown here.</p>
+      <details class="card practice-panel">
+        <summary>Practice offline</summary>
+        <p class="sub">Answers stay on this device. Nothing is submitted. Use this only to try the case files — not a live session.</p>
+        <label class="field" for="fictionalName">Fictional display name (optional)</label>
+        <input id="fictionalName" type="text" placeholder="e.g. Casey Holt" autocomplete="off"/>
+        <label class="field" for="practiceCode">Local label (optional)</label>
+        <input id="practiceCode" type="text" placeholder="e.g. P99" autocomplete="off"/>
+        <div class="actions">
+          <button type="button" class="secondary" id="btnPractice">Start practice offline</button>
+        </div>
+      </details>
+      <p class="foot">All forms, towns, IDs, and claims are FICTIONAL. You will not see a score on this site.</p>
     `;
   }
 
   function doneHTML() {
-    const code = state.meta.blindCode || "—";
+    if (state.submitStatus === "pending") {
+      return `
+        <div class="card" style="text-align:center;padding:36px 20px">
+          <h1>Submitting case file…</h1>
+          <p class="sub">Please wait. Do not close this page.</p>
+        </div>`;
+    }
+    if (state.submitStatus === "error") {
+      return `
+        <div class="card" style="text-align:center;padding:36px 20px">
+          <h1>Could not submit</h1>
+          <p class="notice bad" role="alert" style="text-align:left">${escapeHtml(state.submitError || "Could not complete that request. Try again.")}</p>
+          <p class="sub">Your answers are still on this page. Retry submit — you do not need to restart the case files.</p>
+          <div class="actions" style="justify-content:center">
+            <button type="button" id="btnRetry">Retry submit</button>
+            <button type="button" class="secondary" id="btnAgain">Start over</button>
+          </div>
+        </div>`;
+    }
+    if (state.meta.practice) {
+      const code = state.meta.blindCode || "—";
+      return `
+        <div class="card" style="text-align:center;padding:36px 20px">
+          <span class="badge warn">Practice offline</span>
+          <h1 style="margin-top:10px">Practice run saved on this device</h1>
+          <p class="sub">This was not submitted. No score is shown.</p>
+          <p>Local label: <strong>${escapeHtml(code)}</strong></p>
+          <p class="notice" style="text-align:left">A JSON file was offered for download and a copy was stored in this browser. Live sessions use an invite code and do not use this download path.</p>
+          <div class="actions" style="justify-content:center">
+            <button type="button" class="secondary" id="btnRedl">Re-download JSON</button>
+            <button type="button" class="secondary" id="btnAgain">New run</button>
+          </div>
+        </div>`;
+    }
     return `
       <div class="card" style="text-align:center;padding:36px 20px">
-        <h1>Submitted — administrator will review</h1>
-        <p class="sub">You will not see a score on this screen.</p>
-        <p>Blind code: <strong>${escapeHtml(code)}</strong></p>
-        <p class="notice" style="text-align:left">Your attempt JSON was saved in this browser and a download was offered. If the download was blocked, use Re-download below or ask the administrator to export from the tracker (same browser).</p>
+        <h1>Case file received</h1>
+        <p class="sub">You can close this page. You will not see a score here.</p>
         <div class="actions" style="justify-content:center">
-          <button type="button" class="secondary" id="btnRedl">Re-download JSON</button>
-          <button type="button" class="secondary" id="btnAgain">New run</button>
+          <button type="button" class="secondary" id="btnAgain">Done</button>
         </div>
       </div>`;
   }
 
-  function finishRun() {
-    collectCurrentAnswers();
-    stopTimer();
+  function buildAttempt() {
     const finishedAt = new Date().toISOString();
     const constraints = state.answers._constraints || {};
     delete state.answers._constraints;
-    const attempt = {
+    return {
       id: state.id,
       schema: "mystery-inc-attempt-v1",
       meta: {
@@ -610,11 +664,54 @@ End of block.</pre>
       timestamps: state.timestamps,
       constraints,
     };
-    saveAttempt(attempt);
-    downloadJSON(attempt, `mystery-inc-${attempt.meta.blindCode}.json`);
+  }
+
+  async function sendLiveSubmit() {
+    const attempt = state.lastAttempt;
+    const TakeApi = window.MysteryIncTakeApi;
+    if (!attempt || !TakeApi) {
+      state.submitStatus = "error";
+      state.submitError = "Could not complete that request. Try again.";
+      render();
+      return;
+    }
+    state.submitStatus = "pending";
+    state.submitError = "";
+    render();
+    try {
+      await TakeApi.submit({
+        inviteCode: state.meta.inviteCode || state.meta.blindCode,
+        answers: attempt.answers,
+        constraints: attempt.constraints,
+      });
+      state.submitStatus = "ok";
+    } catch (err) {
+      if (err && err.kind === "already_submitted") {
+        state.submitStatus = "ok";
+      } else {
+        state.submitStatus = "error";
+        state.submitError = (err && err.message) || "Could not complete that request. Try again.";
+      }
+    }
+    render();
+  }
+
+  function finishRun() {
+    const btn = $("#btnContinue");
+    if (btn) btn.disabled = true;
+    collectCurrentAnswers();
+    stopTimer();
+    const attempt = buildAttempt();
     state.lastAttempt = attempt;
     state.stationIndex = STATIONS.length;
-    render();
+    if (state.meta.practice) {
+      saveAttempt(attempt);
+      downloadJSON(attempt, `mystery-inc-${attempt.meta.blindCode}.json`);
+      state.submitStatus = "practice";
+      render();
+      return;
+    }
+    sendLiveSubmit();
   }
 
   function advance() {
@@ -624,13 +721,13 @@ End of block.</pre>
     window.scrollTo(0, 0);
   }
 
-  function startRun() {
-    const code = ($("#blindCode").value || "").trim() || genCode();
-    const name = ($("#fictionalName").value || "").trim();
+  function beginRun(opts) {
+    const code = opts.inviteCode;
     state.meta = {
       blindCode: code,
-      fictionalName: name,
-      practice: !!$("#practiceFlag")?.checked,
+      inviteCode: code,
+      fictionalName: opts.fictionalName || "",
+      practice: !!opts.practice,
       startedAt: new Date().toISOString(),
       eventDate: EVENT_DATE,
       theme: "Mystery Inc Casefile v1",
@@ -641,6 +738,75 @@ End of block.</pre>
     state.stationIndex = 0;
     state.id = "att-" + code + "-" + Date.now();
     state.lastAttempt = null;
+    state.submitStatus = null;
+    state.submitError = "";
+    state.briefingError = "";
+    state.busy = false;
+    render();
+  }
+
+  async function startLiveRun() {
+    const code = ($("#inviteCode").value || "").trim();
+    const errEl = $("#briefingError");
+    const btn = $("#btnStart");
+    if (!code) {
+      state.briefingError = "Enter the invite code you were given to start.";
+      if (errEl) {
+        errEl.textContent = state.briefingError;
+        errEl.classList.remove("hidden");
+      }
+      return;
+    }
+    const TakeApi = window.MysteryIncTakeApi;
+    if (!TakeApi) {
+      state.briefingError = "Could not reach the case-file service. Try again in a moment.";
+      if (errEl) {
+        errEl.textContent = state.briefingError;
+        errEl.classList.remove("hidden");
+      }
+      return;
+    }
+    state.busy = true;
+    state.briefingError = "";
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Checking invite…";
+    }
+    if (errEl) {
+      errEl.textContent = "";
+      errEl.classList.add("hidden");
+    }
+    try {
+      await TakeApi.redeem(code);
+      beginRun({ inviteCode: code, practice: false });
+    } catch (err) {
+      state.busy = false;
+      state.briefingError = (err && err.message) || "Could not complete that request. Try again.";
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Start case files →";
+      }
+      if (errEl) {
+        errEl.textContent = state.briefingError;
+        errEl.classList.remove("hidden");
+      }
+    }
+  }
+
+  function startPracticeRun() {
+    const code = ($("#practiceCode")?.value || "").trim() || genCode();
+    const name = ($("#fictionalName")?.value || "").trim();
+    beginRun({ inviteCode: code, fictionalName: name, practice: true });
+  }
+
+  function resetToBriefing() {
+    stopTimer();
+    state.stationIndex = -1;
+    state.lastAttempt = null;
+    state.submitStatus = null;
+    state.submitError = "";
+    state.briefingError = "";
+    state.busy = false;
     render();
   }
 
@@ -649,23 +815,32 @@ End of block.</pre>
     if (state.stationIndex < 0) {
       $("#timerBar").classList.add("hidden");
       root.innerHTML = briefingHTML();
-      $("#btnStart").onclick = startRun;
+      $("#btnStart").onclick = startLiveRun;
+      $("#btnPractice").onclick = startPracticeRun;
+      $("#inviteCode")?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          startLiveRun();
+        }
+      });
       return;
     }
     if (state.stationIndex >= STATIONS.length) {
       stopTimer();
       $("#timerBar").classList.add("hidden");
       root.innerHTML = doneHTML();
-      $("#btnRedl").onclick = () => {
-        if (state.lastAttempt) {
-          downloadJSON(state.lastAttempt, `mystery-inc-${state.meta.blindCode}.json`);
-        }
-      };
-      $("#btnAgain").onclick = () => {
-        state.stationIndex = -1;
-        state.lastAttempt = null;
-        render();
-      };
+      const redl = $("#btnRedl");
+      if (redl) {
+        redl.onclick = () => {
+          if (state.lastAttempt) {
+            downloadJSON(state.lastAttempt, `mystery-inc-${state.meta.blindCode}.json`);
+          }
+        };
+      }
+      const retry = $("#btnRetry");
+      if (retry) retry.onclick = sendLiveSubmit;
+      const again = $("#btnAgain");
+      if (again) again.onclick = resetToBriefing;
       return;
     }
 
@@ -677,7 +852,12 @@ End of block.</pre>
     state.timestamps[st.id] = state.timestamps[st.id] || {};
     state.timestamps[st.id].startedAt = new Date().toISOString();
 
+    const practiceBanner = state.meta.practice
+      ? '<p class="notice warn-banner">Practice offline — answers stay on this device. Not a live session.</p>'
+      : "";
+
     root.innerHTML =
+      practiceBanner +
       clueBoardHTML(st.id) +
       `<div class="card" style="margin-top:12px"><h2>${st.title}</h2>` +
       stationHTML(st.id) +
