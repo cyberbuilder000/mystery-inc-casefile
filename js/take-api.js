@@ -181,12 +181,23 @@
     throw lastErr;
   }
 
+  function normalizeInviteCode(raw) {
+    return String(raw == null ? "" : raw)
+      .trim()
+      .replace(/[\s\-_]+/g, "")
+      .toUpperCase();
+  }
+
   function redeem(inviteCode) {
-    return postJson("/api/mystery-inc/take/redeem", { inviteCode: inviteCode }, REDEEM_TIMEOUT_MS);
+    return postJson(
+      "/api/mystery-inc/take/redeem",
+      { inviteCode: normalizeInviteCode(inviteCode) },
+      REDEEM_TIMEOUT_MS
+    );
   }
 
   function submit(payload) {
-    const body = { inviteCode: payload.inviteCode, answers: payload.answers };
+    const body = { inviteCode: normalizeInviteCode(payload.inviteCode), answers: payload.answers };
     if (payload.constraints && typeof payload.constraints === "object") {
       body.constraints = payload.constraints;
     }
@@ -197,6 +208,7 @@
     apiBase: apiBase,
     classify: classify,
     userMessage: userMessage,
+    normalizeInviteCode: normalizeInviteCode,
     redeem: redeem,
     submit: submit,
     REDEEM_TIMEOUT_MS: REDEEM_TIMEOUT_MS,
