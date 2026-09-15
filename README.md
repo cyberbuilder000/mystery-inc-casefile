@@ -11,10 +11,21 @@ GitHub Pages deploys from `main` after merge. Do not assume a feature-branch PR 
 
 ## Candidate flow (live)
 1. Open the live URL (this app). **Do not send candidates to the HITL Ops Portal.**
-2. Enter the blind **invite code** they were given.
+2. Enter the blind **invite code** they were given, or open a deep link that prefills it (see below).
 3. Complete Case Files A–G (plus the constraints sheet).
 4. Submit. The app calls HITL public take APIs (`redeem` at start, `submit` at the end).
 5. Success is confirmation only. **No scores, bands, veto, or keys** are shown here.
+
+## Invite deep link
+Operators can send:
+
+`https://cyberbuilder000.github.io/mystery-inc-casefile/?invite=CODE`
+
+The app reads `invite` from `URLSearchParams` (param name is case-insensitive), trims/normalizes the value like admin codes (strip spaces/dashes/underscores, uppercase), prefills the invite field, and auto-redeems. If redeem cannot start, the field stays filled and Start is focused.
+
+Hash form `#invite=CODE` (or `#?invite=CODE`) also works when a host drops the query string.
+
+Practice offline does not use this path and still does not call HITL.
 
 Invalid or already-used invite codes, and network failures, show a clear error. After a failed submit, Retry keeps the answers on the page.
 

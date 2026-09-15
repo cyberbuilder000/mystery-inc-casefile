@@ -546,12 +546,54 @@ End of block.</pre>
     return "<p>Unknown station</p>";
   }
 
+  let autoRedeemAttempted = false;
+
+  function inviteLinkApi() {
+    return window.MysteryIncInviteLink || null;
+  }
+
+  function normalizeInviteCode(raw) {
+    const Link = inviteLinkApi();
+    if (Link && Link.normalizeInviteCode) return Link.normalizeInviteCode(raw);
+    return String(raw == null ? "" : raw)
+      .trim()
+      .replace(/[\s\-_]+/g, "")
+      .toUpperCase();
+  }
+
   function queryInvite() {
+    const Link = inviteLinkApi();
+    if (Link && Link.readInviteFromLocation) {
+      return Link.readInviteFromLocation();
+    }
     try {
       const q = new URLSearchParams(window.location.search);
-      return (q.get("invite") || q.get("code") || "").trim();
+      const raw = q.get("invite") || "";
+      return normalizeInviteCode(raw);
     } catch {
       return "";
+    }
+  }
+
+  function clearInviteFromUrl() {
+    try {
+      const url = new URL(window.location.href);
+      const drop = [];
+      url.searchParams.forEach(function (_value, key) {
+        if (String(key).toLowerCase() === "invite") drop.push(key);
+      });
+      drop.forEach(function (key) {
+        url.searchParams.delete(key);
+      });
+      let hash = url.hash || "";
+      if (/invite=/i.test(hash)) hash = "";
+      const next = url.pathname + url.search + hash;
+      const cur = window.location.pathname + window.location.search + window.location.hash;
+      if (next !== cur && window.history && window.history.replaceState) {
+        window.history.replaceState(null, "", next);
+      }
+    } catch {
+      /* ignore */
     }
   }
 
@@ -746,9 +788,11 @@ End of block.</pre>
   }
 
   async function startLiveRun() {
-    const code = ($("#inviteCode").value || "").trim();
+    const inviteInput = $("#inviteCode");
+    const code = normalizeInviteCode(inviteInput ? inviteInput.value : "");
     const errEl = $("#briefingError");
     const btn = $("#btnStart");
+    if (inviteInput && code) inviteInput.value = code;
     if (!code) {
       state.briefingError = "Enter the invite code you were given to start.";
       if (errEl) {
@@ -778,6 +822,7 @@ End of block.</pre>
     }
     try {
       await TakeApi.redeem(code);
+      clearInviteFromUrl();
       beginRun({ inviteCode: code, practice: false });
     } catch (err) {
       state.busy = false;
@@ -785,6 +830,7 @@ End of block.</pre>
       if (btn) {
         btn.disabled = false;
         btn.textContent = "Start case files →";
+        btn.focus();
       }
       if (errEl) {
         errEl.textContent = state.briefingError;
@@ -817,12 +863,22 @@ End of block.</pre>
       root.innerHTML = briefingHTML();
       $("#btnStart").onclick = startLiveRun;
       $("#btnPractice").onclick = startPracticeRun;
-      $("#inviteCode")?.addEventListener("keydown", (e) => {
+      const inviteInput = $("#inviteCode");
+      inviteInput?.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
           startLiveRun();
         }
       });
+      const preset = queryInvite();
+      if (preset && !autoRedeemAttempted && !state.busy && !state.briefingError) {
+        autoRedeemAttempted = true;
+        startLiveRun();
+      } else if (preset) {
+        $("#btnStart")?.focus();
+      } else {
+        inviteInput?.focus();
+      }
       return;
     }
     if (state.stationIndex >= STATIONS.length) {

@@ -84,12 +84,29 @@ async function run() {
     timeoutDelays.push(ms);
     return realSetTimeout(fn, ms);
   };
-  global.fetch = async function () {
+  let lastBody = null;
+  global.fetch = async function (_url, opts) {
+    lastBody = JSON.parse(opts.body);
     return jsonResponse(200, { ok: true });
   };
   await api.redeem("X1");
   global.setTimeout = realSetTimeout;
   assert.ok(timeoutDelays.indexOf(20000) !== -1, "redeem abort timer stays 20s");
+  assert.strictEqual(api.normalizeInviteCode(" p-7892 "), "P7892");
+  lastBody = null;
+  global.fetch = async function (_url, opts) {
+    lastBody = JSON.parse(opts.body);
+    return jsonResponse(200, { ok: true });
+  };
+  await api.redeem(" p-7892 ");
+  assert.strictEqual(lastBody.inviteCode, "P7892");
+  lastBody = null;
+  global.fetch = async function (_url, opts) {
+    lastBody = JSON.parse(opts.body);
+    return jsonResponse(200, { ok: true });
+  };
+  await api.submit({ inviteCode: " p_78 92 ", answers: {} });
+  assert.strictEqual(lastBody.inviteCode, "P7892");
 
   // Network: one auto-retry, then succeed.
   calls = 0;
