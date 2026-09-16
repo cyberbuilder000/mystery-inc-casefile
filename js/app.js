@@ -14,6 +14,7 @@
   ];
 
   const EVENT_DATE = "2026-09-28";
+  const REFERENCE_SESSION_DAY = "2026-09-13";
 
   let state = {
     meta: {},
@@ -241,9 +242,10 @@
     if (id === "A") {
       return `
         <p class="sub">Clue Board: ▶A · 10 minutes · Coolsville Parks Temporary Event Permit (FICTIONAL)</p>
+        <p class="notice">You can’t return to a finished case file. Don’t refresh during a live run.</p>
         <div class="notice"><strong>SOP (follow exactly)</strong>
           <ol>
-            <li>Confirm event date is at least <strong>14 calendar days</strong> after today. If not, stop and write “DATE TOO SOON — need new date.”</li>
+            <li>Use <strong>Reference session day: ${REFERENCE_SESSION_DAY}</strong> as “today” for the 14-day rule (do not use your real calendar). Confirm the event date is at least <strong>14 calendar days</strong> after that reference day. If not, stop and write “DATE TOO SOON — need new date.”</li>
             <li>Copy Applicant Legal Name and Mailing Address exactly from the Applicant Card.</li>
             <li>Enter Park Site Code from the Site List that matches the requested park name. Do not guess.</li>
             <li>Base Fee: $25 flat + $5 per expected guest over 20. Example: 32 guests → 12 over 20 → $25 + $60 = $85.</li>
@@ -259,7 +261,8 @@
           <li>Mailing Address: <code>4418 Moss Lamp Rd, Coolsville, XX 75011</code></li>
           <li>Requested park name: <code>River Steps Grove</code></li>
           <li>Expected guests: <code>28</code></li>
-          <li>Event date: <code>${EVENT_DATE}</code> (session day reference: 2026-09-13)</li>
+          <li>Event date: <code>${EVENT_DATE}</code></li>
+          <li>Reference session day (“today” for the 14-day rule): <code>${REFERENCE_SESSION_DAY}</code> — do not use your real calendar</li>
         </ul>
         <h3>Site List (FICTIONAL)</h3>
         <table><thead><tr><th>Park name</th><th>Park Site Code</th></tr></thead>
@@ -351,12 +354,12 @@
         <h3>B2 — Best next move</h3>
         ${mc("b2", [
           ["a","(a) Edit the packet to match the checklist, then file"],
-          ["b","(b) Report the mismatches; don’t “fix” either source without the principal’s direction"],
+          ["b","(b) Report the mismatches; don’t “fix” either source without direction from the person in charge (your administrator)"],
           ["c","(c) Delete mismatched fields so it looks clean for the mayor"],
           ["d","(d) Ignore mismatches under $10"],
         ])}
-        <h3>B3 — Clean transcribe (character-accurate)</h3>
-        <p class="sub">Copy the block below exactly. Do not correct, complete, or “improve” it.</p>
+        <h3>B3 — Copy exactly (every character)</h3>
+        <p class="sub">Copy the block below exactly (every character). Do not correct, complete, or “improve” it. The block includes a Reference code line — type that line as shown.</p>
         <pre class="mono card" style="margin:8px 0">SAMPLE/FICTIONAL — TRANSCRIBE ONLY
 Payee: Vogt, Samira E.
 Attention: Claims Draft Desk
@@ -374,8 +377,8 @@ End of block.</pre>
       return `
         <p class="sub">7 minutes · Open response</p>
         <div class="notice">Velma talks fast while chasing a van:<br/><br/>
-        “We need people able to get paid through the household ops setup and we need the paperwork spine so nothing important is missing. Figure out what to do first. Don’t use fancy legal words if you don’t know them — plain steps are fine. Include how you’ll check something is right before calling it done. Write down what you still don’t know.”</div>
-        <p><strong>Your job:</strong> Ordered checklist (≥6 concrete steps), ≥2 verify-before-done items, ≥2 unknowns/asks. Do <strong>not</strong> invent EINs, logins, or “already filed” claims.</p>
+        “We need people able to get paid through the household ops setup and we need a checklist of required paperwork so nothing important is missing. Figure out what to do first. Don’t use fancy legal words if you don’t know them — plain steps are fine. Include how you’ll check something is right before calling it done. Write down what you still don’t know.”</div>
+        <p><strong>Your job:</strong> Ordered checklist of <strong>at least 6 steps</strong>, ≥2 verify-before-done items, ≥2 unknowns/asks. Do <strong>not</strong> invent tax IDs or account numbers you weren’t given, logins, or “already filed” claims.</p>
         <label class="field">Your ordered checklist</label>
         <textarea name="c1" style="min-height:260px" placeholder="1. ..."></textarea>
       `;
@@ -391,7 +394,7 @@ End of block.</pre>
         ${mc("d1", [
           ["a","(a) Enter Shaggy’s phone number as the Confirmation ID and finish today"],
           ["b","(b) Invent a plausible Confirmation ID so the portal accepts it"],
-          ["c","(c) Stop: don’t set the account; ask Claims Desk / principal for a real Confirmation ID"],
+          ["c","(c) Stop: don’t set the account; ask Claims Desk / your administrator for a real Confirmation ID"],
           ["d","(d) Submit with Confirmation ID blank and hope it clears"],
         ])}
         <h3>D2 — Open (4–6 lines)</h3>
@@ -409,7 +412,7 @@ End of block.</pre>
             <li>Project: Sample Ops Spine — Week 1</li>
             <li>Done: labeled folders Intake / Waiting / Done</li>
             <li>Done: logged one-digit address mismatch; did <strong>not</strong> change either source</li>
-            <li>Blocked: waiting on principal for correct mailing address</li>
+            <li>Blocked: waiting on your administrator for correct mailing address</li>
             <li>Ask: 10 minutes tomorrow to review the mismatch</li>
             <li>Do not invent other progress</li>
           </ul>
@@ -421,7 +424,7 @@ End of block.</pre>
 
     if (id === "SOFT") {
       return `
-        <p class="sub">Optional · 2 minutes · soft bonus only</p>
+        <p class="sub">Optional. Skipping is fine and does not hurt your result. · ~2 minutes</p>
         <h3>Where would Velma look first?</h3>
         <p>Official steps for fictional “State Bureau of Household Employer Accounts”:</p>
         ${mc("soft", [
@@ -507,7 +510,8 @@ End of block.</pre>
         <input name="c_days" type="text"/>
         <label class="field">Hard conflicts</label>
         <input name="c_conflicts" type="text"/>
-        <h3>2) CE plan</h3>
+        <h3>2) CE plan (continuing education / college coursework)</h3>
+        <p class="sub">CE means continuing education or college coursework required for this seat.</p>
         <p>Currently enrolled in CE?</p>
         ${mc("c_ce_enrolled", [["yes","Yes"],["no","No"]])}
         <label class="field">If yes: school/program</label>
@@ -529,10 +533,11 @@ End of block.</pre>
         ${mc("c_license", [["yes","Yes"],["no","No"]])}
         <p>Comfortable with local daytime driving for ops errands?</p>
         ${mc("c_driving", [["yes","Yes"],["no","No"],["na","N/A"]])}
-        <h3>4) Dependent-adult wall</h3>
-        <p>Understands JD #1 is <strong>not</strong> a Dependent-adult care seat?</p>
+        <h3>4) Role scope (not care work)</h3>
+        <p class="sub">This seat is not hands-on care work. You will not be asked to transport a dependent adult.</p>
+        <p>Understands this part-time ops job is <strong>not</strong> hands-on care work?</p>
         ${mc("c_not_care", [["yes","Yes"],["no","No"]])}
-        <p>Any conflict with no-transport / no-direct-Dependent-adult wall?</p>
+        <p>Any conflict with “you will not be asked to transport a dependent adult”?</p>
         ${mc("c_care_conflict", [["yes","Yes"],["no","No"],["na","N/A"]])}
         <h3>5) Interest lean (optional)</h3>
         ${mc("c_lean", [
@@ -606,19 +611,21 @@ End of block.</pre>
     const startLabel = state.busy ? "Checking invite…" : "Start case files →";
     return `
       <div class="card">
-        <span class="badge">Personal lane · Mystery Inc · Fictional</span>
+        <span class="badge">Mystery Inc · Fictional</span>
         <h1 style="margin-top:10px">CASE BRIEFING — Mystery Inc. Needs a Paperwork Pro</h1>
         <p>Mystery Inc. (Fred, Daphne, Velma, Shaggy, and Scooby) is about to clear their name in Coolsville… but a “Paperwork Phantom” keeps mangling their forms. If the packet isn’t clean, the mayor cancels the picnic <em>and</em> the unmasking.</p>
         <p><strong>Your role:</strong> You’re the gang’s <strong>Case File Runner</strong> for one shift. Follow weird instructions, catch swapped digits, refuse fake IDs, and keep Fred from “just finishing it.”</p>
         <div class="notice">
-          <strong>How this run works:</strong>
-          <ol>
-            <li>Enter the <strong>invite code</strong> you were given, then complete <strong>7 case files</strong> (Stations A–G).</li>
-            <li>Each file unlocks the next. Clue Board tracks progress.</li>
-            <li>Inventing answers to “save the day” = the Phantom wins.</li>
-            <li>No speed bonus — Continue when done early.</li>
-            <li>No phones. Ask only for timing / materials — not answers.</li>
-          </ol>
+          <strong>Session map:</strong>
+          <ul>
+            <li>Timed case files A–G (~48 min) + optional ~2 min question + short logistics form (untimed).</li>
+            <li>Invite → Start uses the code → Continue locks each file → final Submit sends answers.</li>
+            <li>No score on screen; your administrator follows up.</li>
+            <li>No phones, no web search, no AI helpers unless your administrator says otherwise.</li>
+          </ul>
+          <p style="margin:10px 0 0"><strong>Invite rules:</strong> One-time code from your administrator. Starting uses it up. If the code is invalid, already used, or expired — stop and message them. Do not use Practice for a real hiring session. Practice never counts and never reaches hiring.</p>
+          <p style="margin:10px 0 0"><strong>Important:</strong> You can’t return to a finished case file. Don’t refresh during a live run.</p>
+          <p style="margin:10px 0 0" class="sub">Inventing answers to “save the day” helps the Phantom — not you. No speed bonus; Continue when done early.</p>
         </div>
         <div class="clue-board" style="margin:12px 0">
           <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>→ Unmask</span>
@@ -632,7 +639,7 @@ End of block.</pre>
       </div>
       <details class="card practice-panel">
         <summary>Practice offline</summary>
-        <p class="sub">Answers stay on this device. Nothing is submitted. Use this only to try the case files — not a live session.</p>
+        <p class="sub">Answers stay on this device. Nothing is submitted. Practice never counts and never reaches hiring — do not use Practice for a real hiring session.</p>
         <label class="field" for="fictionalName">Fictional display name (optional)</label>
         <input id="fictionalName" type="text" placeholder="e.g. Casey Holt" autocomplete="off"/>
         <label class="field" for="practiceCode">Local label (optional)</label>
@@ -673,9 +680,9 @@ End of block.</pre>
           <h1 style="margin-top:10px">Practice run saved on this device</h1>
           <p class="sub">This was not submitted. No score is shown.</p>
           <p>Local label: <strong>${escapeHtml(code)}</strong></p>
-          <p class="notice" style="text-align:left">A JSON file was offered for download and a copy was stored in this browser. Live sessions use an invite code and do not use this download path.</p>
+          <p class="notice" style="text-align:left">A download of your practice answers was offered, and a copy was stored in this browser. Live sessions use an invite code and do not use this download path.</p>
           <div class="actions" style="justify-content:center">
-            <button type="button" class="secondary" id="btnRedl">Re-download JSON</button>
+            <button type="button" class="secondary" id="btnRedl">Re-download practice answers</button>
             <button type="button" class="secondary" id="btnAgain">New run</button>
           </div>
         </div>`;
