@@ -30,6 +30,10 @@
     submitError: "",
     briefingError: "",
     busy: false,
+    attestedNoAi: false,
+    attestedAt: null,
+    integrityPayload: null,
+    tracker: null,
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -162,7 +166,85 @@
     return $$("input[name='" + name + "']:checked").map((x) => x.value);
   }
 
+  function rulesApi() {
+    return window.MysteryIncRules || null;
+  }
+
+  function attestationChecked() {
+    const el = $("#attestNoAi");
+    return !!(el && el.checked);
+  }
+
+  function flushIntegrityFocus() {
+    if (state.tracker) state.tracker.endAllFocus();
+  }
+
+  function buildIntegrityPayload(answers) {
+    const rules = rulesApi();
+    if (!rules || !state.tracker) return null;
+    return state.tracker.buildPayload({
+      rulesVersion: rules.PAYLOAD_RULES_VERSION,
+      attestedNoAi: state.attestedNoAi === true,
+      attestedAt: state.attestedAt,
+      answers: answers || {},
+    });
+  }
+
+  function showBriefingError(message) {
+    state.briefingError = message || "";
+    const errEl = $("#briefingError");
+    if (!errEl) return;
+    errEl.textContent = state.briefingError;
+    errEl.classList.toggle("hidden", !state.briefingError);
+  }
+
+  function syncStartButtons() {
+    const checked = attestationChecked();
+    state.attestedNoAi = checked;
+    if (checked) {
+      if (!state.attestedAt) state.attestedAt = new Date().toISOString();
+    } else {
+      state.attestedAt = null;
+    }
+    const allow = checked && !!state.tracker && !state.busy;
+    const startBtn = $("#btnStart");
+    const practiceBtn = $("#btnPractice");
+    if (startBtn) startBtn.disabled = !allow;
+    if (practiceBtn) practiceBtn.disabled = !allow;
+  }
+
+  function confirmAttestation() {
+    const rules = rulesApi();
+    if (!rules || !state.tracker) {
+      return {
+        ok: false,
+        message: "Session rules failed to load. You cannot start. Refresh the page.",
+      };
+    }
+    const gate = rules.evaluateStartGate(attestationChecked());
+    if (!gate.ok) return gate;
+    if (!state.attestedAt) state.attestedAt = new Date().toISOString();
+    state.attestedNoAi = true;
+    return { ok: true, message: "" };
+  }
+
+  function renderRules(rules) {
+    return (
+      "<h2>" +
+      escapeHtml(rules.RULES_HEADING) +
+      "</h2>" +
+      '<div class="rules" id="sessionRules" data-rules-version="' +
+      escapeHtml(rules.RULES_VERSION) +
+      '">' +
+      rules.RULES_BODY_PARAGRAPHS.map(function (paragraph) {
+        return "<p>" + escapeHtml(paragraph) + "</p>";
+      }).join("") +
+      "</div>"
+    );
+  }
+
   function collectCurrentAnswers() {
+    flushIntegrityFocus();
     if (state.stationIndex < 0 || state.stationIndex >= STATIONS.length) return;
     const sid = STATIONS[state.stationIndex].id;
     const a = state.answers;
@@ -551,8 +633,6 @@ End of block.</pre>
     return "<p>Unknown station</p>";
   }
 
-  let autoRedeemAttempted = false;
-
   function inviteLinkApi() {
     return window.MysteryIncInviteLink || null;
   }
@@ -603,11 +683,26 @@ End of block.</pre>
   }
 
   function briefingHTML() {
+    const rules = rulesApi();
+    if (!rules) {
+      return `
+        <div class="card">
+          <h1>CASE BRIEFING — Mystery Inc. Needs a Paperwork Pro</h1>
+          <p class="notice bad" role="alert">Session rules failed to load. You cannot start. Refresh the page.</p>
+        </div>`;
+    }
     const preset = escapeHtml(queryInvite());
-    const err = state.briefingError
-      ? `<p class="notice bad" id="briefingError" role="alert">${escapeHtml(state.briefingError)}</p>`
+    const prepError = state.tracker
+      ? ""
+      : "This page could not prepare the session. Refresh and try again.";
+    const shownError = state.briefingError || prepError;
+    const err = shownError
+      ? `<p class="notice bad" id="briefingError" role="alert">${escapeHtml(shownError)}</p>`
       : `<p class="notice bad hidden" id="briefingError" role="alert"></p>`;
-    const busy = state.busy ? " disabled" : "";
+    const startAllowed = state.attestedNoAi === true && !state.busy && !!state.tracker;
+    const startDisabled = startAllowed ? "" : " disabled";
+    const practiceDisabled = state.attestedNoAi === true && !!state.tracker && !state.busy ? "" : " disabled";
+    const attestChecked = state.attestedNoAi === true ? " checked" : "";
     const startLabel = state.busy ? "Checking invite…" : "Start case files →";
     return `
       <div class="card">
@@ -615,18 +710,12 @@ End of block.</pre>
         <h1 style="margin-top:10px">CASE BRIEFING — Mystery Inc. Needs a Paperwork Pro</h1>
         <p>Mystery Inc. (Fred, Daphne, Velma, Shaggy, and Scooby) is about to clear their name in Coolsville… but a “Paperwork Phantom” keeps mangling their forms. If the packet isn’t clean, the mayor cancels the picnic <em>and</em> the unmasking.</p>
         <p><strong>Your role:</strong> You’re the gang’s <strong>Case File Runner</strong> for one shift. Follow weird instructions, catch swapped digits, refuse fake IDs, and keep Fred from “just finishing it.”</p>
-        <div class="notice">
-          <strong>Session map:</strong>
-          <ul>
-            <li>Timed case files A–G (~48 min) + optional ~2 min question + short logistics form (untimed).</li>
-            <li>Invite → Start uses the code → Continue locks each file → final Submit sends answers.</li>
-            <li>No score on screen; your administrator follows up.</li>
-            <li>No phones, no web search, no AI helpers unless your administrator says otherwise.</li>
-          </ul>
-          <p style="margin:10px 0 0"><strong>Invite rules:</strong> One-time code from your administrator. Starting uses it up. If the code is invalid, already used, or expired — stop and message them. Do not use Practice for a real hiring session. Practice never counts and never reaches hiring.</p>
-          <p style="margin:10px 0 0"><strong>Important:</strong> You can’t return to a finished case file. Don’t refresh during a live run.</p>
-          <p style="margin:10px 0 0" class="sub">Inventing answers to “save the day” helps the Phantom — not you. No speed bonus; Continue when done early.</p>
-        </div>
+        ${renderRules(rules)}
+        <label class="attest" for="attestNoAi">
+          <input type="checkbox" id="attestNoAi"${attestChecked}/>
+          <span>${escapeHtml(rules.ATTESTATION_LABEL)}</span>
+        </label>
+        <p class="sub" id="attestHint">${escapeHtml(rules.ATTESTATION_HINT)}</p>
         <div class="clue-board" style="margin:12px 0">
           <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>→ Unmask</span>
         </div>
@@ -634,18 +723,18 @@ End of block.</pre>
         <input id="inviteCode" type="text" placeholder="Enter your invite code" autocomplete="off" spellcheck="false" value="${preset}"/>
         ${err}
         <div class="actions">
-          <button type="button" id="btnStart"${busy}>${startLabel}</button>
+          <button type="button" id="btnStart"${startDisabled}>${startLabel}</button>
         </div>
       </div>
       <details class="card practice-panel">
         <summary>Practice offline</summary>
-        <p class="sub">Answers stay on this device. Nothing is submitted. Practice never counts and never reaches hiring — do not use Practice for a real hiring session.</p>
+        <p class="sub">Answers stay on this device. Nothing is submitted. Practice never counts and never reaches hiring — do not use Practice for a real hiring session. Practice follows the same session rules, including the attestation.</p>
         <label class="field" for="fictionalName">Fictional display name (optional)</label>
         <input id="fictionalName" type="text" placeholder="e.g. Casey Holt" autocomplete="off"/>
         <label class="field" for="practiceCode">Local label (optional)</label>
         <input id="practiceCode" type="text" placeholder="e.g. P99" autocomplete="off"/>
         <div class="actions">
-          <button type="button" class="secondary" id="btnPractice">Start practice offline</button>
+          <button type="button" class="secondary" id="btnPractice"${practiceDisabled}>Start practice offline</button>
         </div>
       </details>
       <p class="foot">All forms, towns, IDs, and claims are FICTIONAL. You will not see a score on this site.</p>
@@ -724,6 +813,19 @@ End of block.</pre>
       render();
       return;
     }
+    if (!state.integrityPayload) {
+      try {
+        state.integrityPayload = buildIntegrityPayload(attempt.answers);
+      } catch (err) {
+        state.integrityPayload = null;
+      }
+    }
+    if (!state.integrityPayload) {
+      state.submitStatus = "error";
+      state.submitError = "Could not complete that request. Try again.";
+      render();
+      return;
+    }
     state.submitStatus = "pending";
     state.submitError = "";
     render();
@@ -732,6 +834,7 @@ End of block.</pre>
         inviteCode: state.meta.inviteCode || state.meta.blindCode,
         answers: attempt.answers,
         constraints: attempt.constraints,
+        integrity: state.integrityPayload,
       });
       state.submitStatus = "ok";
     } catch (err) {
@@ -752,11 +855,24 @@ End of block.</pre>
     stopTimer();
     const attempt = buildAttempt();
     state.lastAttempt = attempt;
+    if (!state.meta.practice) {
+      try {
+        state.integrityPayload = buildIntegrityPayload(attempt.answers);
+      } catch (err) {
+        state.integrityPayload = null;
+      }
+    }
     state.stationIndex = STATIONS.length;
     if (state.meta.practice) {
       saveAttempt(attempt);
       downloadJSON(attempt, `mystery-inc-${attempt.meta.blindCode}.json`);
       state.submitStatus = "practice";
+      render();
+      return;
+    }
+    if (!state.integrityPayload) {
+      state.submitStatus = "error";
+      state.submitError = "Could not complete that request. Try again.";
       render();
       return;
     }
@@ -791,38 +907,44 @@ End of block.</pre>
     state.submitError = "";
     state.briefingError = "";
     state.busy = false;
+    state.attestedNoAi = opts.attestedNoAi === true;
+    state.attestedAt = opts.attestedAt || null;
+    state.integrityPayload = null;
+    if (state.tracker) state.tracker.reset();
     render();
   }
 
   async function startLiveRun() {
+    const gate = confirmAttestation();
+    if (!gate.ok) {
+      showBriefingError(gate.message);
+      const attest = $("#attestNoAi");
+      if (attest) attest.focus();
+      return;
+    }
     const inviteInput = $("#inviteCode");
     const code = normalizeInviteCode(inviteInput ? inviteInput.value : "");
     const errEl = $("#briefingError");
     const btn = $("#btnStart");
     if (inviteInput && code) inviteInput.value = code;
     if (!code) {
-      state.briefingError = "Enter the invite code you were given to start.";
-      if (errEl) {
-        errEl.textContent = state.briefingError;
-        errEl.classList.remove("hidden");
-      }
+      showBriefingError("Enter the invite code you were given to start.");
       return;
     }
     const TakeApi = window.MysteryIncTakeApi;
     if (!TakeApi) {
-      state.briefingError = "Could not reach the case-file service. Try again in a moment.";
-      if (errEl) {
-        errEl.textContent = state.briefingError;
-        errEl.classList.remove("hidden");
-      }
+      showBriefingError("Could not reach the case-file service. Try again in a moment.");
       return;
     }
+    const attestedAt = state.attestedAt;
     state.busy = true;
     state.briefingError = "";
     if (btn) {
       btn.disabled = true;
       btn.textContent = "Checking invite…";
     }
+    const practiceBtn = $("#btnPractice");
+    if (practiceBtn) practiceBtn.disabled = true;
     if (errEl) {
       errEl.textContent = "";
       errEl.classList.add("hidden");
@@ -830,26 +952,42 @@ End of block.</pre>
     try {
       await TakeApi.redeem(code);
       clearInviteFromUrl();
-      beginRun({ inviteCode: code, practice: false });
+      beginRun({
+        inviteCode: code,
+        practice: false,
+        attestedNoAi: true,
+        attestedAt: attestedAt,
+      });
     } catch (err) {
       state.busy = false;
       state.briefingError = (err && err.message) || "Could not complete that request. Try again.";
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = "Start case files →";
-        btn.focus();
-      }
+      if (btn) btn.textContent = "Start case files →";
+      syncStartButtons();
       if (errEl) {
         errEl.textContent = state.briefingError;
         errEl.classList.remove("hidden");
       }
+      if (btn && !btn.disabled) btn.focus();
     }
   }
 
   function startPracticeRun() {
+    const gate = confirmAttestation();
+    if (!gate.ok) {
+      showBriefingError(gate.message);
+      const attest = $("#attestNoAi");
+      if (attest) attest.focus();
+      return;
+    }
     const code = ($("#practiceCode")?.value || "").trim() || genCode();
     const name = ($("#fictionalName")?.value || "").trim();
-    beginRun({ inviteCode: code, fictionalName: name, practice: true });
+    beginRun({
+      inviteCode: code,
+      fictionalName: name,
+      practice: true,
+      attestedNoAi: true,
+      attestedAt: state.attestedAt,
+    });
   }
 
   function resetToBriefing() {
@@ -860,6 +998,10 @@ End of block.</pre>
     state.submitError = "";
     state.briefingError = "";
     state.busy = false;
+    state.attestedNoAi = false;
+    state.attestedAt = null;
+    state.integrityPayload = null;
+    if (state.tracker) state.tracker.reset();
     render();
   }
 
@@ -868,8 +1010,12 @@ End of block.</pre>
     if (state.stationIndex < 0) {
       $("#timerBar").classList.add("hidden");
       root.innerHTML = briefingHTML();
-      $("#btnStart").onclick = startLiveRun;
-      $("#btnPractice").onclick = startPracticeRun;
+      const startBtn = $("#btnStart");
+      const practiceBtn = $("#btnPractice");
+      const attest = $("#attestNoAi");
+      if (startBtn) startBtn.onclick = startLiveRun;
+      if (practiceBtn) practiceBtn.onclick = startPracticeRun;
+      if (attest) attest.addEventListener("change", syncStartButtons);
       const inviteInput = $("#inviteCode");
       inviteInput?.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
@@ -878,14 +1024,8 @@ End of block.</pre>
         }
       });
       const preset = queryInvite();
-      if (preset && !autoRedeemAttempted && !state.busy && !state.briefingError) {
-        autoRedeemAttempted = true;
-        startLiveRun();
-      } else if (preset) {
-        $("#btnStart")?.focus();
-      } else {
-        inviteInput?.focus();
-      }
+      if (preset && attest) attest.focus();
+      else if (inviteInput) inviteInput.focus();
       return;
     }
     if (state.stationIndex >= STATIONS.length) {
@@ -918,9 +1058,14 @@ End of block.</pre>
     const practiceBanner = state.meta.practice
       ? '<p class="notice warn-banner">Practice offline — answers stay on this device. Not a live session.</p>'
       : "";
+    const rules = rulesApi();
+    const reminder = rules
+      ? `<p class="notice rules-reminder">${escapeHtml(rules.DURING_REMINDER)}</p>`
+      : "";
 
     root.innerHTML =
       practiceBanner +
+      reminder +
       clueBoardHTML(st.id) +
       `<div class="card" style="margin-top:12px"><h2>${st.title}</h2>` +
       stationHTML(st.id) +
@@ -932,6 +1077,9 @@ End of block.</pre>
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    if (window.MysteryIncAnswerIntegrity) {
+      state.tracker = window.MysteryIncAnswerIntegrity.createBoundTracker(document);
+    }
     state.stationIndex = -1;
     render();
   });
