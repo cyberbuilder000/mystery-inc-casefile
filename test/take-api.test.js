@@ -185,7 +185,7 @@ async function run() {
   assert.strictEqual(calls, 1);
 
   const integrity = {
-    rules_version: "2026-10-12-open-book",
+    rules_version: "2026-10-12-open-book-r2",
     attested_no_ai: true,
     attested_at: "2026-10-12T15:04:05.000Z",
     fields: {

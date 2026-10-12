@@ -18,7 +18,7 @@ GitHub Pages deploys from `main` after merge. Do not assume a feature-branch PR 
 6. Success is confirmation only. **No scores, bands, veto, or keys** are shown here.
 
 ## Candidate rules
-Canonical text: `content/rules-2026-10-12-open-book.js` (`RULES_TEXT`, display version `2026-10-12-open-book`). The briefing renders that file. Do not copy the rules into another file. Submit sends a different token: `integrity.rules_version` is `open-book-v1`.
+Canonical text: `content/rules-2026-10-12-open-book.js` (`RULES_TEXT`, display version `2026-10-12-open-book-r2`). The briefing renders that file. Do not copy the rules into another file. Submit sends a different token: `integrity.rules_version` is `open-book-v1`.
 
 The run is open book (Google, web searches, references, and the candidate's own notes). AI tools must not generate or write answers. The attestation is required before Start and before Practice.
 

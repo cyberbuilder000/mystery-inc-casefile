@@ -157,7 +157,7 @@ async function run() {
     "attested_at",
     "fields",
   ]);
-  assert.strictEqual(rules.RULES_VERSION, "2026-10-12-open-book");
+  assert.strictEqual(rules.RULES_VERSION, "2026-10-12-open-book-r2");
   assert.strictEqual(rules.PAYLOAD_RULES_VERSION, "open-book-v1");
   assert.strictEqual(payload.rules_version, "open-book-v1");
   assert.notStrictEqual(payload.rules_version, rules.RULES_VERSION);

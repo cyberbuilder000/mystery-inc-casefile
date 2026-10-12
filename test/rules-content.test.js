@@ -16,13 +16,20 @@ function run() {
   const rules = loadRules();
   const text = rules.RULES_TEXT;
 
-  assert.strictEqual(rules.RULES_VERSION, "2026-10-12-open-book");
+  const aiParagraph =
+    "No direct AI answers. ChatGPT, Grok, Claude, Copilot, Gemini, and similar tools must not generate or write your answers. Do not ask an AI tool to write, rewrite, or complete an answer and then submit that text. What you submit must be your own writing. You may read AI summaries that appear in search results like any other source, but do not copy their text into your answers.";
+  const countsParagraph =
+    "While you work, the page counts how often you paste into each written answer, how many characters were pasted versus typed, the largest single paste, and how long that answer box was active. This covers the open responses on case files C, D, E, F, and G and the optional one-sentence why. It does not record your keystrokes or your clipboard, and it does not block paste. After you submit, your written answers are also checked for patterns that are common in AI-written text. A reviewer may see a note such as 'review'. That note only prompts a person to look; it is not a finding that you broke the rules, and it never changes your score. If a note could affect a decision about you, your administrator will tell you and give you a chance to explain first. If you use dictation, a screen reader, or other assistive tools, tell your administrator before you start. It will not count against you. The counts and notes are deleted one year after the hiring decision.";
+
+  assert.strictEqual(rules.RULES_VERSION, "2026-10-12-open-book-r2");
   assert.strictEqual(rules.PAYLOAD_RULES_VERSION, "open-book-v1");
   assert.ok(!text.includes("open-book-v1"));
   assert.strictEqual(rules.ATTESTATION_DEFAULT_CHECKED, false);
   assert.strictEqual(text, rules.RULES_PARAGRAPHS.join("\n\n"));
   assert.strictEqual(rules.RULES_PARAGRAPHS[0], rules.RULES_HEADING);
-  assert.ok(text.startsWith("Session rules\n\nRules version 2026-10-12-open-book."));
+  assert.ok(text.startsWith("Session rules\n\nRules version 2026-10-12-open-book-r2."));
+  assert.strictEqual(rules.RULES_BODY_PARAGRAPHS[2], aiParagraph);
+  assert.strictEqual(rules.RULES_BODY_PARAGRAPHS[4], countsParagraph);
 
   assert.ok(text.includes("Google, web searches, references, and your own notes are allowed."));
   assert.ok(text.includes("No direct AI answers."));
@@ -30,16 +37,8 @@ function run() {
   assert.ok(text.includes(rules.ATTESTATION_LABEL));
   assert.ok(text.includes(rules.ATTESTATION_HINT));
   assert.ok(text.includes(rules.DURING_REMINDER));
-  assert.ok(
-    text.includes(
-      "The page counts paste events and how many characters are pasted versus typed in each written answer, and how long is spent."
-    )
-  );
-  assert.ok(text.includes("It does not record keystrokes or clipboard contents."));
-  assert.ok(text.includes("Any flag is advisory only, for a human reviewer, and never changes the score."));
-  assert.ok(text.includes("The page does not block paste."));
-  assert.ok(text.includes("case files C, D, E, F, and G"));
-  assert.ok(text.includes("optional one-sentence why"));
+  assert.ok(text.includes(countsParagraph));
+  assert.ok(text.includes("You may read AI summaries that appear in search results like any other source, but do not copy their text into your answers."));
 
   assert.ok(!/no web search/i.test(text));
   assert.ok(!/no phones/i.test(text));
