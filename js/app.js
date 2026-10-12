@@ -183,7 +183,7 @@
     const rules = rulesApi();
     if (!rules || !state.tracker) return null;
     return state.tracker.buildPayload({
-      rulesVersion: rules.RULES_VERSION,
+      rulesVersion: rules.PAYLOAD_RULES_VERSION,
       attestedNoAi: state.attestedNoAi === true,
       attestedAt: state.attestedAt,
       answers: answers || {},

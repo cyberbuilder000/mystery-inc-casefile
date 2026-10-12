@@ -17,6 +17,8 @@ function run() {
   const text = rules.RULES_TEXT;
 
   assert.strictEqual(rules.RULES_VERSION, "2026-10-12-open-book");
+  assert.strictEqual(rules.PAYLOAD_RULES_VERSION, "open-book-v1");
+  assert.ok(!text.includes("open-book-v1"));
   assert.strictEqual(rules.ATTESTATION_DEFAULT_CHECKED, false);
   assert.strictEqual(text, rules.RULES_PARAGRAPHS.join("\n\n"));
   assert.strictEqual(rules.RULES_PARAGRAPHS[0], rules.RULES_HEADING);
@@ -60,6 +62,8 @@ function run() {
   assert.ok(!app.includes("autoRedeem"));
   assert.ok(!app.includes("ChatGPT"), "AI tool names stay in the rules file");
   assert.ok(!app.includes("2026-10-12-open-book"), "rules version stays in the content file");
+  assert.ok(app.includes("PAYLOAD_RULES_VERSION"));
+  assert.ok(!app.includes("open-book-v1"));
   assert.ok(app.includes("evaluateStartGate"));
   assert.ok(app.includes("integrity: state.integrityPayload"));
   assert.ok(app.includes('id="attestNoAi"'));

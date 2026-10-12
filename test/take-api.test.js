@@ -39,17 +39,35 @@ async function throwsKind(fn, kind, status) {
 
 async function run() {
   const api = loadApi();
+  const integrityOk = {
+    rules_version: "display-version-must-not-be-sent",
+    attested_no_ai: true,
+    attested_at: "2026-10-12T15:04:05.000Z",
+    fields: {},
+  };
 
   assert.strictEqual(api.SUBMIT_TIMEOUT_MS, 60000);
   assert.strictEqual(api.REDEEM_TIMEOUT_MS, 20000);
   assert.strictEqual(api.NETWORK_AUTO_RETRIES, 1);
 
+  assert.strictEqual(api.INTEGRITY_RULES_VERSION, "open-book-v1");
+  assert.strictEqual(api.classify(400, { error: "attestation_required" }, false), "attestation_required");
+  assert.strictEqual(api.classify(400, { code: "attestation_required" }, false), "attestation_required");
+  assert.strictEqual(api.classify(400, "attestation_required", false), "attestation_required");
+  assert.strictEqual(api.classify(400, { error: "malformed invite" }, false), "invalid");
   assert.strictEqual(api.classify(429, { error: "submit code limit" }, false), "rate_limited");
   assert.strictEqual(api.classify(429, null, false), "rate_limited");
   assert.strictEqual(api.classify(503, { error: "boom" }, false), "unavailable");
   assert.strictEqual(api.classify(0, null, true), "network");
   assert.strictEqual(api.classify(0, null, "timeout"), "timeout");
   assert.strictEqual(api.classify(0, null, "aborted"), "timeout");
+
+  const attestMsg = api.userMessage("attestation_required");
+  assert.match(attestMsg, /no-AI attestation is required/i);
+  assert.match(attestMsg, /Start over/i);
+  assert.match(attestMsg, /AI tools/i);
+  assert.doesNotMatch(attestMsg, /invite code is not valid/i);
+  assert.doesNotMatch(attestMsg, /open-book-v1/);
 
   const rateMsg = api.userMessage("rate_limited");
   assert.match(rateMsg, /Too many submit attempts/i);
@@ -72,7 +90,7 @@ async function run() {
     return jsonResponse(429, { error: "submit code limit" });
   };
   const rateErr = await throwsKind(function () {
-    return api.submit({ inviteCode: "X1", answers: { A: "n/a" } });
+    return api.submit({ inviteCode: "X1", answers: { A: "n/a" }, integrity: integrityOk });
   }, "rate_limited", 429);
   global.setTimeout = realSetTimeout;
   assert.strictEqual(calls, 1, "429 must not be retried");
@@ -105,7 +123,7 @@ async function run() {
     lastBody = JSON.parse(opts.body);
     return jsonResponse(200, { ok: true });
   };
-  await api.submit({ inviteCode: " p_78 92 ", answers: {} });
+  await api.submit({ inviteCode: " p_78 92 ", answers: {}, integrity: integrityOk });
   assert.strictEqual(lastBody.inviteCode, "P7892");
 
   // Network: one auto-retry, then succeed.
@@ -115,7 +133,7 @@ async function run() {
     if (calls === 1) throw new TypeError("Failed to fetch");
     return jsonResponse(200, { ok: true });
   };
-  const ok = await api.submit({ inviteCode: "X1", answers: {} });
+  const ok = await api.submit({ inviteCode: "X1", answers: {}, integrity: integrityOk });
   assert.strictEqual(ok.ok, true);
   assert.strictEqual(calls, 2, "network gets exactly one retry");
 
@@ -126,7 +144,7 @@ async function run() {
     throw new TypeError("Failed to fetch");
   };
   await throwsKind(function () {
-    return api.submit({ inviteCode: "X1", answers: {} });
+    return api.submit({ inviteCode: "X1", answers: {}, integrity: integrityOk });
   }, "network", 0);
   assert.strictEqual(calls, 2, "network retry cap is 1");
 
@@ -137,7 +155,7 @@ async function run() {
     throw abortError();
   };
   const timeoutErr = await throwsKind(function () {
-    return api.submit({ inviteCode: "X1", answers: {} });
+    return api.submit({ inviteCode: "X1", answers: {}, integrity: integrityOk });
   }, "timeout", 0);
   assert.strictEqual(calls, 2, "timeout gets exactly one retry");
   assert.match(timeoutErr.message, /timed out/i);
@@ -151,7 +169,7 @@ async function run() {
     return jsonResponse(429, { error: "submit code limit" });
   };
   await throwsKind(function () {
-    return api.submit({ inviteCode: "X1", answers: {} });
+    return api.submit({ inviteCode: "X1", answers: {}, integrity: integrityOk });
   }, "rate_limited", 429);
   assert.strictEqual(calls, 2, "stop after 429; do not keep retrying");
 
@@ -185,6 +203,7 @@ async function run() {
     lastBody = JSON.parse(opts.body);
     return jsonResponse(200, { ok: true });
   };
+  const wireIntegrity = Object.assign({}, integrity, { rules_version: "open-book-v1" });
   await api.submit({
     inviteCode: "X1",
     answers: { c1: "abcdef" },
@@ -195,16 +214,41 @@ async function run() {
     inviteCode: "X1",
     answers: { c1: "abcdef" },
     constraints: { hours: "3" },
-    integrity: integrity,
+    integrity: wireIntegrity,
   });
+  assert.strictEqual(lastBody.integrity.rules_version, "open-book-v1");
+  assert.notStrictEqual(integrity.rules_version, "open-book-v1");
 
-  lastBody = null;
-  global.fetch = async function (_url, opts) {
-    lastBody = JSON.parse(opts.body);
+  calls = 0;
+  global.fetch = async function () {
+    calls += 1;
     return jsonResponse(200, { ok: true });
   };
-  await api.submit({ inviteCode: "X1", answers: {} });
-  assert.strictEqual(lastBody.integrity, undefined);
+  await throwsKind(function () {
+    return api.submit({ inviteCode: "X1", answers: {} });
+  }, "attestation_required", 0);
+  assert.strictEqual(calls, 0, "missing integrity must not be posted");
+  await throwsKind(function () {
+    return api.submit({
+      inviteCode: "X1",
+      answers: {},
+      integrity: Object.assign({}, integrityOk, { attested_no_ai: false }),
+    });
+  }, "attestation_required", 0);
+  assert.strictEqual(calls, 0, "attested_no_ai false must not be posted");
+
+  calls = 0;
+  global.fetch = async function () {
+    calls += 1;
+    return jsonResponse(400, { error: "attestation_required" });
+  };
+  const attestErr = await throwsKind(function () {
+    return api.submit({ inviteCode: "X1", answers: {}, integrity: integrityOk });
+  }, "attestation_required", 400);
+  assert.strictEqual(calls, 1, "400 attestation_required must not be retried");
+  assert.match(attestErr.message, /no-AI attestation is required/i);
+  assert.match(attestErr.message, /Start over/i);
+  assert.doesNotMatch(attestErr.message, /invite code is not valid/i);
 
   calls = 0;
   let rateBody = null;
@@ -217,7 +261,8 @@ async function run() {
     return api.submit({ inviteCode: "X1", answers: {}, integrity: integrity });
   }, "rate_limited", 429);
   assert.strictEqual(calls, 1, "429 with integrity still must not be retried");
-  assert.deepStrictEqual(rateBody.integrity, integrity);
+  assert.deepStrictEqual(rateBody.integrity, wireIntegrity);
+  assert.strictEqual(rateBody.integrity.rules_version, "open-book-v1");
 
   timeoutDelays.length = 0;
   global.setTimeout = function (fn, ms) {
@@ -238,7 +283,7 @@ async function run() {
     return jsonResponse(502, { error: "bad gateway" });
   };
   await throwsKind(function () {
-    return api.submit({ inviteCode: "X1", answers: {} });
+    return api.submit({ inviteCode: "X1", answers: {}, integrity: integrityOk });
   }, "unavailable", 502);
   assert.strictEqual(calls, 1, "5xx must not auto-retry");
 

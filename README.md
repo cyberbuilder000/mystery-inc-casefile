@@ -18,7 +18,7 @@ GitHub Pages deploys from `main` after merge. Do not assume a feature-branch PR 
 6. Success is confirmation only. **No scores, bands, veto, or keys** are shown here.
 
 ## Candidate rules
-Canonical text: `content/rules-2026-10-12-open-book.js` (`RULES_TEXT`, `rules_version` `2026-10-12-open-book`). The briefing renders that file. Do not copy the rules into another file.
+Canonical text: `content/rules-2026-10-12-open-book.js` (`RULES_TEXT`, display version `2026-10-12-open-book`). The briefing renders that file. Do not copy the rules into another file. Submit sends a different token: `integrity.rules_version` is `open-book-v1`.
 
 The run is open book (Google, web searches, references, and the candidate's own notes). AI tools must not generate or write answers. The attestation is required before Start and before Practice.
 
@@ -55,7 +55,7 @@ Endpoints (CORS from `https://cyberbuilder000.github.io` and localhost):
 - `POST /api/mystery-inc/take/redeem` body `{ inviteCode }`
 - `POST /api/mystery-inc/take/submit` body `{ inviteCode, answers, constraints?, integrity }`
 
-`integrity` is `{ rules_version, attested_no_ai, attested_at, fields }`. `attested_no_ai` is `true`. `attested_at` is an ISO timestamp. `fields` always includes `c1`, `d2`, `e1`, `f3`, `g3`, and `soft_why`. Each field is `{ paste_events, pasted_chars, typed_chars, max_single_paste, active_ms, final_len }` and every value is a number. Submit timeout stays 60 seconds. HTTP 429 is not retried.
+`integrity` is always sent. The server accepts a submit with no `integrity`, so this client refuses to post without it. The body field is `{ rules_version, attested_no_ai, attested_at, fields }`. `rules_version` is exactly `open-book-v1`. `attested_no_ai` is `true`. `attested_at` is an ISO timestamp. `fields` always includes `c1`, `d2`, `e1`, `f3`, `g3`, and `soft_why`. Each field is `{ paste_events, pasted_chars, typed_chars, max_single_paste, active_ms, final_len }` and every value is a number. A 400 `attestation_required` tells the candidate to start over and tick the no-AI attestation. That response is not retried. Submit timeout stays 60 seconds. HTTP 429 is not retried.
 
 Responses are dark (no scores). This client never renders score/band/veto fields even if a payload included them.
 

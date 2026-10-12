@@ -157,8 +157,10 @@ async function run() {
     "attested_at",
     "fields",
   ]);
-  assert.strictEqual(payload.rules_version, rules.RULES_VERSION);
-  assert.strictEqual(payload.rules_version, "2026-10-12-open-book");
+  assert.strictEqual(rules.RULES_VERSION, "2026-10-12-open-book");
+  assert.strictEqual(rules.PAYLOAD_RULES_VERSION, "open-book-v1");
+  assert.strictEqual(payload.rules_version, "open-book-v1");
+  assert.notStrictEqual(payload.rules_version, rules.RULES_VERSION);
   assert.strictEqual(payload.attested_no_ai, true);
   assert.strictEqual(payload.attested_at, "2026-10-12T15:04:05.000Z");
   assert.deepStrictEqual(Object.keys(payload.fields), api.TRACKED_FIELDS);

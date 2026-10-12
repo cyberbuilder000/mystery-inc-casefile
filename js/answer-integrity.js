@@ -215,7 +215,11 @@
       endAllFocus(optionsIn.now);
       if (optionsIn.answers) applyAnswers(optionsIn.answers);
       const rules = loadRules();
-      if (optionsIn.rulesVersion && optionsIn.rulesVersion !== rules.RULES_VERSION) {
+      const payloadVersion = rules.PAYLOAD_RULES_VERSION;
+      if (payloadVersion !== "open-book-v1") {
+        throw new Error("rules version mismatch");
+      }
+      if (optionsIn.rulesVersion && optionsIn.rulesVersion !== payloadVersion) {
         throw new Error("rules version mismatch");
       }
       if (optionsIn.attestedNoAi !== true) {
@@ -229,7 +233,7 @@
         throw badTime;
       }
       return {
-        rules_version: rules.RULES_VERSION,
+        rules_version: payloadVersion,
         attested_no_ai: true,
         attested_at: optionsIn.attestedAt,
         fields: fieldsSnapshot(),

@@ -1,7 +1,8 @@
 /**
  * Canonical candidate-facing session rules.
  * Legal reviews RULES_TEXT in this file. Do not copy these rules into other files.
- * rules_version: 2026-10-12-open-book
+ * Display version (on the page and in RULES_TEXT): 2026-10-12-open-book
+ * Submit payload integrity.rules_version: open-book-v1
  */
 (function (root, factory) {
   const api = factory();
@@ -11,7 +12,10 @@
     root.MysteryIncRules = api;
   }
 })(typeof window !== "undefined" ? window : globalThis, function () {
+  /** Candidate-facing / legal display version. Not the submit token. */
   const RULES_VERSION = "2026-10-12-open-book";
+  /** integrity.rules_version. The HITL API requires this exact value. */
+  const PAYLOAD_RULES_VERSION = "open-book-v1";
   const RULES_HEADING = "Session rules";
 
   const ATTESTATION_LABEL =
@@ -54,6 +58,7 @@
 
   return {
     RULES_VERSION: RULES_VERSION,
+    PAYLOAD_RULES_VERSION: PAYLOAD_RULES_VERSION,
     RULES_HEADING: RULES_HEADING,
     RULES_BODY_PARAGRAPHS: RULES_BODY_PARAGRAPHS,
     RULES_PARAGRAPHS: RULES_PARAGRAPHS,

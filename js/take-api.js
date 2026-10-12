@@ -27,7 +27,12 @@
       "Too many submit attempts for this code. Wait about 10 minutes or ask admin for a new invite.",
     unavailable: "Could not reach the case-file service. Try again in a moment.",
     unknown: "Could not complete that request. Try again.",
+    attestation_required:
+      "Your case file was not received because the no-AI attestation is required. Start over and tick the box that you will not use AI tools to generate or write your answers.",
   };
+
+  /** Wire value for integrity.rules_version. The API rejects any other string. */
+  const INTEGRITY_RULES_VERSION = "open-book-v1";
 
   function apiBase() {
     if (typeof window !== "undefined" && window.location) {
@@ -52,6 +57,7 @@
   }
 
   function blobFromData(data) {
+    if (typeof data === "string") return data.toLowerCase();
     if (!data || typeof data !== "object") return "";
     const parts = [];
     ["error", "code", "reason", "status", "type", "message"].forEach(function (k) {
@@ -65,6 +71,8 @@
     if (networkFailed) return "network";
     if (status === 429) return "rate_limited";
     const blob = blobFromData(data);
+
+    if (/attestation[_\s-]?required/.test(blob)) return "attestation_required";
 
     if (/already[_\s-]?submitted|duplicate submit|already received/.test(blob)) {
       return "already_submitted";
@@ -159,7 +167,7 @@
     const text = await res.text();
     const ctype = res.headers && res.headers.get ? res.headers.get("content-type") : "";
     const data = parseBody(text, ctype);
-    const kind = classify(res.status, data, false);
+    const kind = classify(res.status, data != null ? data : text, false);
     if (kind) throw TakeError(kind, res.status);
     if (data && (data.ok === false || data.success === false)) {
       throw TakeError("unknown", res.status);
@@ -197,13 +205,20 @@
   }
 
   function submit(payload) {
+    const incoming = payload && payload.integrity;
+    if (!incoming || typeof incoming !== "object" || incoming.attested_no_ai !== true) {
+      throw TakeError("attestation_required", 0);
+    }
     const body = { inviteCode: normalizeInviteCode(payload.inviteCode), answers: payload.answers };
     if (payload.constraints && typeof payload.constraints === "object") {
       body.constraints = payload.constraints;
     }
-    if (payload.integrity && typeof payload.integrity === "object") {
-      body.integrity = payload.integrity;
-    }
+    body.integrity = {
+      rules_version: INTEGRITY_RULES_VERSION,
+      attested_no_ai: true,
+      attested_at: incoming.attested_at,
+      fields: incoming.fields && typeof incoming.fields === "object" ? incoming.fields : {},
+    };
     return postJson("/api/mystery-inc/take/submit", body, SUBMIT_TIMEOUT_MS);
   }
 
@@ -217,5 +232,6 @@
     REDEEM_TIMEOUT_MS: REDEEM_TIMEOUT_MS,
     SUBMIT_TIMEOUT_MS: SUBMIT_TIMEOUT_MS,
     NETWORK_AUTO_RETRIES: NETWORK_AUTO_RETRIES,
+    INTEGRITY_RULES_VERSION: INTEGRITY_RULES_VERSION,
   };
 });
