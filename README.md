@@ -12,16 +12,24 @@ GitHub Pages deploys from `main` after merge. Do not assume a feature-branch PR 
 ## Candidate flow (live)
 1. Open the live URL (this app). **Do not send candidates to the HITL Ops Portal.**
 2. Enter the blind **invite code** they were given, or open a deep link that prefills it (see below).
-3. Complete Case Files A–G (plus the constraints sheet).
-4. Submit. The app calls HITL public take APIs (`redeem` at start, `submit` at the end).
-5. Success is confirmation only. **No scores, bands, veto, or keys** are shown here.
+3. Read the session rules and tick the attestation. The box starts unchecked. The case files cannot start without it.
+4. Complete Case Files A–G (plus the constraints sheet).
+5. Submit. The app calls HITL public take APIs (`redeem` at start, `submit` at the end).
+6. Success is confirmation only. **No scores, bands, veto, or keys** are shown here.
+
+## Candidate rules
+Canonical text: `content/rules-2026-10-12-open-book.js` (`RULES_TEXT`, `rules_version` `2026-10-12-open-book`). The briefing renders that file. Do not copy the rules into another file.
+
+The run is open book (Google, web searches, references, and the candidate's own notes). AI tools must not generate or write answers. The attestation is required before Start and before Practice.
+
+On submit, written answers `c1`, `d2`, `e1`, `f3`, `g3`, and `soft_why` include numeric integrity counts only (paste events, pasted characters, typed characters, largest paste, active time, final length). The page does not record keystrokes or clipboard contents. Those numbers are advisory for a human reviewer and do not change the score. Paste is not blocked.
 
 ## Invite deep link
 Operators can send:
 
 `https://cyberbuilder000.github.io/mystery-inc-casefile/?invite=CODE`
 
-The app reads `invite` from `URLSearchParams` (param name is case-insensitive), trims/normalizes the value like admin codes (strip spaces/dashes/underscores, uppercase), prefills the invite field, and auto-redeems. If redeem cannot start, the field stays filled and Start is focused.
+The app reads `invite` from `URLSearchParams` (param name is case-insensitive), trims/normalizes the value like admin codes (strip spaces/dashes/underscores, uppercase), and prefills the invite field. It does not auto-redeem. The candidate still has to tick the attestation and press Start. If redeem cannot start, the field stays filled.
 
 Hash form `#invite=CODE` (or `#?invite=CODE`) also works when a host drops the query string.
 
@@ -45,7 +53,9 @@ Default base is staging:
 Endpoints (CORS from `https://cyberbuilder000.github.io` and localhost):
 
 - `POST /api/mystery-inc/take/redeem` body `{ inviteCode }`
-- `POST /api/mystery-inc/take/submit` body `{ inviteCode, answers, constraints? }`
+- `POST /api/mystery-inc/take/submit` body `{ inviteCode, answers, constraints?, integrity }`
+
+`integrity` is `{ rules_version, attested_no_ai, attested_at, fields }`. `attested_no_ai` is `true`. `attested_at` is an ISO timestamp. `fields` always includes `c1`, `d2`, `e1`, `f3`, `g3`, and `soft_why`. Each field is `{ paste_events, pasted_chars, typed_chars, max_single_paste, active_ms, final_len }` and every value is a number. Submit timeout stays 60 seconds. HTTP 429 is not retried.
 
 Responses are dark (no scores). This client never renders score/band/veto fields even if a payload included them.
 

@@ -201,6 +201,9 @@
     if (payload.constraints && typeof payload.constraints === "object") {
       body.constraints = payload.constraints;
     }
+    if (payload.integrity && typeof payload.integrity === "object") {
+      body.integrity = payload.integrity;
+    }
     return postJson("/api/mystery-inc/take/submit", body, SUBMIT_TIMEOUT_MS);
   }
 

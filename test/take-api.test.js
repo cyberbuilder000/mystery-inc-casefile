@@ -166,6 +166,71 @@ async function run() {
   }, "rate_limited", 429);
   assert.strictEqual(calls, 1);
 
+  const integrity = {
+    rules_version: "2026-10-12-open-book",
+    attested_no_ai: true,
+    attested_at: "2026-10-12T15:04:05.000Z",
+    fields: {
+      c1: { paste_events: 1, pasted_chars: 4, typed_chars: 2, max_single_paste: 4, active_ms: 10, final_len: 6 },
+      d2: { paste_events: 0, pasted_chars: 0, typed_chars: 0, max_single_paste: 0, active_ms: 0, final_len: 0 },
+      e1: { paste_events: 0, pasted_chars: 0, typed_chars: 3, max_single_paste: 0, active_ms: 5, final_len: 3 },
+      f3: { paste_events: 0, pasted_chars: 0, typed_chars: 0, max_single_paste: 0, active_ms: 0, final_len: 0 },
+      g3: { paste_events: 2, pasted_chars: 8, typed_chars: 1, max_single_paste: 5, active_ms: 20, final_len: 9 },
+      soft_why: { paste_events: 0, pasted_chars: 0, typed_chars: 7, max_single_paste: 0, active_ms: 4, final_len: 7 },
+    },
+  };
+
+  lastBody = null;
+  global.fetch = async function (_url, opts) {
+    lastBody = JSON.parse(opts.body);
+    return jsonResponse(200, { ok: true });
+  };
+  await api.submit({
+    inviteCode: "X1",
+    answers: { c1: "abcdef" },
+    constraints: { hours: "3" },
+    integrity: integrity,
+  });
+  assert.deepStrictEqual(lastBody, {
+    inviteCode: "X1",
+    answers: { c1: "abcdef" },
+    constraints: { hours: "3" },
+    integrity: integrity,
+  });
+
+  lastBody = null;
+  global.fetch = async function (_url, opts) {
+    lastBody = JSON.parse(opts.body);
+    return jsonResponse(200, { ok: true });
+  };
+  await api.submit({ inviteCode: "X1", answers: {} });
+  assert.strictEqual(lastBody.integrity, undefined);
+
+  calls = 0;
+  let rateBody = null;
+  global.fetch = async function (_url, opts) {
+    calls += 1;
+    rateBody = JSON.parse(opts.body);
+    return jsonResponse(429, { error: "submit code limit" });
+  };
+  await throwsKind(function () {
+    return api.submit({ inviteCode: "X1", answers: {}, integrity: integrity });
+  }, "rate_limited", 429);
+  assert.strictEqual(calls, 1, "429 with integrity still must not be retried");
+  assert.deepStrictEqual(rateBody.integrity, integrity);
+
+  timeoutDelays.length = 0;
+  global.setTimeout = function (fn, ms) {
+    timeoutDelays.push(ms);
+    return realSetTimeout(fn, ms);
+  };
+  global.fetch = async function () {
+    return jsonResponse(200, { ok: true });
+  };
+  await api.submit({ inviteCode: "X1", answers: {}, integrity: integrity });
+  global.setTimeout = realSetTimeout;
+  assert.ok(timeoutDelays.indexOf(60000) !== -1, "integrity submit keeps the 60s abort timer");
+
   // 5xx is unavailable and is not auto-retried (only network/timeout).
   calls = 0;
   global.fetch = async function () {
